@@ -1,0 +1,38 @@
+{
+    "name": "clicktrail/symfony-bundle",
+    "description": "Symfony bundle for ClickTrail attribution: config tree, request capture subscriber, consent resolver gate, Messenger delivery, Twig helpers, diagnostics command, webhook signature verification.",
+    "type": "symfony-bundle",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.1",
+        "symfony/framework-bundle": "^6.4|^7.0",
+        "symfony/messenger": "^6.4|^7.0",
+        "symfony/twig-bundle": "^6.4|^7.0",
+        "symfony/clock": "^6.4|^7.0",
+        "twig/twig": "^3.0",
+        "psr/log": "^3.0",
+        "clicktrail/php-sdk": "dev-main"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../clicktrail-php",
+            "options": {"symlink": true}
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/vizuh/clicktrail-php.git"
+        }
+    ],
+    "autoload": {
+        "psr-4": {"ClickTrail\\Symfony\\": "src/"}
+    },
+    "authors": [
+        {"name": "Vizuh OU", "email": "hugo@vizuh.com"}
+    ],
+    "keywords": ["symfony", "bundle", "attribution", "utm", "gclid", "consent", "messenger"],
+    "support": {
+        "issues": "https://github.com/vizuh/clicktrail-symfony/issues",
+        "source": "https://github.com/vizuh/clicktrail-symfony"
+    }
+}

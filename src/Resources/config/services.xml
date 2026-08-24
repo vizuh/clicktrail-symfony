@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<container xmlns="http://symfony.com/schema/dic/services"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://symfony.com/schema/dic/services
+                               https://symfony.com/schema/dic/services/services-1.0.xsd">
+
+    <services>
+        <defaults autowire="true" autoconfigure="true"/>
+
+        <!-- Consent: NullConsentResolver is the safe default (unknown=denied);
+             clicktrail.resolver_class overrides the alias in the Extension. -->
+        <service id="clicktrail.consent.null" class="ClickTrail\Symfony\Consent\NullConsentResolver"/>
+        <service id="ClickTrail\Symfony\Consent\ConsentResolverInterface" alias="clicktrail.consent.null"/>
+        <service id="ClickTrail\Symfony\Consent\NullConsentResolver" alias="clicktrail.consent.null"/>
+
+        <!-- Clock fallback so the bundle boots even if the host app has not
+             aliased a clock; symfony/clock's NativeClock is UTC-based. -->
+        <service id="clicktrail.clock" class="Symfony\Component\Clock\NativeClock">
+            <argument>UTC</argument> <!-- // TODO verify NativeClock constructor arg name/timezone handling on Symfony 7 before release -->
+        </service>
+        <service id="Symfony\Component\Clock\ClockInterface" alias="clicktrail.clock"/>
+
+        <!-- Per-request context holder (stateless service; state rides on
+             request attributes, never on the service). -->
+        <service id="ClickTrail\Symfony\Attribution\ContextHolder" class="ClickTrail\Symfony\Attribution\ContextHolder" public="false"/>
+
+        <!-- Capture subscriber: kernel.request, high priority so it runs
+             before routing/session-consuming listeners of lower priority. -->
+        <service id="ClickTrail\Symfony\EventSubscriber\RequestSubscriber" class="ClickTrail\Symfony\EventSubscriber\RequestSubscriber">
+            <tag name="kernel.event_subscriber"/>
+            <argument type="service" id="ClickTrail\Symfony\Consent\ConsentResolverInterface"/>
+            <argument type="service" id="Symfony\Component\Clock\ClockInterface"/>
+            <argument type="service" id="ClickTrail\Symfony\Attribution\ContextHolder"/>
+            <argument>%clicktrail.consent_required%</argument>
+            <argument>%clicktrail.site_id%</argument>
+        </service>
+
+        <!-- BatchClient: PSR-18 client + factories come from the host app
+             container (e.g. symfony/http-client). If they are not defined,
+             this service fails at runtime, not compile time.
+             // TODO verify host-app wiring docs: recommend
+             Psr18Client + HttpFactory registration snippet in README. -->
+        <service id="clicktrail.batch_client" class="ClickTrail\Client\BatchClient">
+            <argument>%clicktrail.site_id%</argument>
+            <argument>%clicktrail.endpoint%</argument>
+            <argument type="service" id="Psr\Http\Client\ClientInterface"/>
+            <argument type="service" id="Psr\Http\Message\RequestFactoryInterface"/>
+            <argument type="service" id="Psr\Http\Message\StreamFactoryInterface"/>
+            <argument type="service" id="logger" on-invalid="null"/>
+        </service>
+
+        <!-- Messenger delivery handler -->
+        <service id="ClickTrail\Symfony\Messenger\DeliverEventsMessageHandler" class="ClickTrail\Symfony\Messenger\DeliverEventsMessageHandler">
+            <argument type="service" id="clicktrail.batch_client"/>
+            <argument type="service" id="logger" on-invalid="null"/>
+            <tag name="message_handler" handles="ClickTrail\Symfony\Messenger\DeliverEventsMessage"/> <!-- // TODO verify explicit handles attr vs __invoke auto-registration across Symfony 6.4/7.x before release -->
+        </service>
+
+        <!-- Twig extension: render-only helpers -->
+        <service id="ClickTrail\Symfony\Twig\ClickTrailExtension" class="ClickTrail\Symfony\Twig\ClickTrailExtension">
+            <tag name="twig.extension"/>
+        </service>
+
+        <!-- Diagnostics command -->
+        <service id="ClickTrail\Symfony\Console\DiagnoseCommand" class="ClickTrail\Symfony\Console\DiagnoseCommand">
+            <argument>%clicktrail.site_id%</argument>
+            <argument>%clicktrail.endpoint%</argument>
+            <argument>%clicktrail.consent_required%</argument>
+            <argument>%clicktrail.delivery.transport%</argument>
+            <argument>%clicktrail.resolver_class%</argument>
+            <tag name="console.command" command="clicktrail:diagnose"/>
+        </service>
+    </services>
+</container>
