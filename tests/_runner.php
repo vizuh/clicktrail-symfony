@@ -49,7 +49,8 @@ spl_autoload_register(function ($class): void {
     // ClickTrail\Core\Foo -> src/Core/Foo.php ; ClickTrail\Client\Event\Bar -> src/Client/Event/Bar.php
     foreach (['Core', 'Client', 'Consent', 'Conventions'] as $top) {
         if (str_starts_with($rel, $top . '/')) {
-            $path = __DIR__ . '/../../clicktrail-php/src/' . $rel . '.php';
+            $sdkRoot = getenv('CLICKTRAIL_SDK_ROOT') ?: dirname(__DIR__, 2) . '/clicktrail-php';
+            $path = $sdkRoot . '/src/' . $rel . '.php';
             if (is_file($path)) {
                 require $path;
             }
@@ -76,9 +77,9 @@ $failures = 0;
 // --- T1: webhook signature true/false ----------------------------------------
 $payload = '{"order":"a1","visitor_id":"v-9"}';
 $sig = WebhookSignature::sign($payload, 'secret-123');
-check(is_string($sig) && strlen($sig) === 64, 'T1 sign returns bare sha256 hex');
-check(WebhookSignature::verify($payload, $sig, 'secret-123') === true, 'T1 valid signature verifies');
-check(WebhookSignature::verify($payload, 'sha256=' . $sig, 'secret-123') === true, 'T1 prefixed form accepted');
+check(is_string($sig) && str_starts_with($sig, 'sha256=') && strlen($sig) === 71, 'T1 sign returns prefixed HMAC-SHA256');
+check(WebhookSignature::verify($payload, $sig, 'secret-123') === true, 'T1 prefixed signature verifies');
+check(WebhookSignature::verify($payload, substr($sig, 7), 'secret-123') === true, 'T1 bare hex form accepted');
 check(WebhookSignature::verify($payload, $sig, 'wrong-secret') === false, 'T1 wrong secret rejected');
 check(WebhookSignature::verify($payload . ' ', $sig, 'secret-123') === false, 'T1 tampered payload rejected');
 check(WebhookSignature::verify($payload, '', 'secret-123') === false, 'T1 empty header rejected');

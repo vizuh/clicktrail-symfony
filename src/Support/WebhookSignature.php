@@ -32,6 +32,6 @@ final class WebhookSignature
             $provided = substr($provided, strlen(self::ALGO) + 1);
         }
 
-        return hash_equals(self::sign($payload, $secret), $provided); // HMAC-SHA256, canonical across ClickTrail adapters
+        return hash_equals(hash_hmac(self::ALGO, $payload, $secret), $provided);
     }
 }
