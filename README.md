@@ -4,7 +4,8 @@
 
 **clicktrail/symfony-bundle**
 
-Request capture, consent gating, Messenger delivery and Twig helpers for deterministic campaign attribution — in any Symfony 6.4 / 7.x app.
+Carry observed acquisition context through Symfony request, Twig, and Messenger
+boundaries with explicit consent gating.
 
 </div>
 
@@ -31,7 +32,11 @@ Request capture, consent gating, Messenger delivery and Twig helpers for determi
 
 ## Why
 
-Most tracking packages store what a page showed. ClickTrail proves which campaign created the lead or sale. This bundle is a thin adapter over [`clicktrail/php-sdk`](https://github.com/vizuh/clicktrail-php), which owns the deterministic parse/classify/merge core; the bundle owns Symfony effects: request subscriber, consent gate, Messenger delivery, Twig helpers, diagnostics.
+This bundle does not determine which campaign caused a lead or sale. It adapts
+[`clicktrail/php-sdk`](https://github.com/vizuh/clicktrail-php), which owns the
+deterministic parse, classify, and merge core. The bundle owns the Symfony
+request subscriber, consent gate, Messenger delivery, Twig helpers, and
+diagnostics.
 
 ## Installation
 
@@ -69,17 +74,17 @@ public function form(ContextHolder $holder): Response
 {
     $context = $holder->get();       // AttributionContext for this request (or null)
     // $context?->attribution->first->source === 'google',
-    // $context?->attribution->first->clickIds['gclid'] set — persisted to the
+    // $context?->attribution->first->clickIds['gclid'] set; persisted to the
     // session ONLY when consent permits analytics storage; unknown = denied.
 }
 
 // 3. On conversion, dispatch delivery:
 $this->bus->dispatch(new \ClickTrail\Symfony\Messenger\DeliverEventsMessage());
-// handler flushes the SDK BatchClient — batched POST to endpoint with
+// handler flushes the SDK BatchClient; batched POST to endpoint with
 // idempotency keys; nothing is sent during the request itself.
 ```
 
-A direct visit afterwards changes nothing — first touch stays, stored last touch persists. That is the SDK's merge law, tested, not promised.
+A direct visit afterwards changes nothing; first touch stays, stored last touch persists. That is the SDK's merge law, tested, not promised.
 
 ## Reading attribution
 
@@ -134,7 +139,7 @@ Verify ClickTrail webhook callbacks with constant-time SHA-256 comparison:
 
 ## Flex recipe plan
 
-A `symfony/recipes-contrib` pull request providing the default `config/packages/clicktrail.yaml` skeleton is planned **post-release** — the recipe cannot be submitted before the package has a tagged version. Until then, create the config file manually as shown above.
+A `symfony/recipes-contrib` pull request providing the default `config/packages/clicktrail.yaml` skeleton is planned **post-release**; the recipe cannot be submitted before the package has a tagged version. Until then, create the config file manually as shown above.
 
 ## Not included (deliberate)
 
@@ -143,7 +148,9 @@ A `symfony/recipes-contrib` pull request providing the default `config/packages/
 ## How it differs
 
 - **DIY UTM-to-cookie snippets** store whatever the URL carried, unvalidated. ClickTrail applies deterministic first/last-touch merge laws validated by golden fixtures shared with our WordPress and GTM engines, gates persistence on consent, and delivers batched events with idempotency keys.
-- **DirectoryTree/Metrics** counts anonymous events. Complementary — ClickTrail connects campaigns to identities and revenue, not page-view counters.
+- **DirectoryTree/Metrics** counts anonymous events. It serves a separate job;
+  ClickTrail carries observed acquisition context and does not provide identity
+  resolution or revenue attribution.
 
 See `../docs/COMPETITOR-NOTES.md` for the full analysis.
 
@@ -157,4 +164,4 @@ CI lints all PHP files on PHP 8.1–8.3 (`.github/workflows/ci.yml`, canonical t
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT; see [LICENSE](LICENSE).

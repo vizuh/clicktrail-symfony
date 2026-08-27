@@ -4,7 +4,7 @@
 
 **clicktrail/symfony-bundle**
 
-面向确定性广告归因的请求捕获、同意门控、Messenger 投递与 Twig 辅助函数——适用于任意 Symfony 6.4 / 7.x 应用。
+通过 Symfony 请求、Twig 和 Messenger 边界传递观测到的获客上下文，并应用明确的同意门控。
 
 </div>
 
@@ -31,7 +31,8 @@
 
 ## 为什么
 
-大多数追踪包只记录页面展示了什么。ClickTrail 证明是哪个广告系列创造了线索或成交。本 bundle 是 [`clicktrail/php-sdk`](https://github.com/vizuh/clicktrail-php) 之上的轻量适配层，SDK 持有确定性的 parse/classify/merge 核心；bundle 负责 Symfony 侧的效应：请求订阅器、同意门控、Messenger 投递、Twig 辅助函数和诊断。
+此 bundle 不判断是哪次营销活动导致了线索或成交。它适配
+[`clicktrail/php-sdk`](https://github.com/vizuh/clicktrail-php)，后者负责确定性的 parse、classify 和 merge 核心。bundle 负责 Symfony 请求订阅器、同意门控、Messenger 投递、Twig 辅助函数和诊断。
 
 ## 安装
 
@@ -69,17 +70,17 @@ public function form(ContextHolder $holder): Response
 {
     $context = $holder->get();       // 本次请求的 AttributionContext（或 null）
     // $context?->attribution->first->source === 'google'，
-    // $context?->attribution->first->clickIds['gclid'] 已写入——仅当同意策略允许
+    // $context?->attribution->first->clickIds['gclid'] 已写入；仅当同意策略允许
     // analytics storage 时才持久化到会话；未知 = 拒绝。
 }
 
 // 3. 转化发生时，派发投递：
 $this->bus->dispatch(new \ClickTrail\Symfony\Messenger\DeliverEventsMessage());
-// handler 刷新 SDK 的 BatchClient——批量 POST 到端点并带幂等键；
+// handler 刷新 SDK 的 BatchClient；批量 POST 到端点并带幂等键；
 // 请求本身期间不发送任何数据。
 ```
 
-之后的直接访问不会改变任何东西——first touch 保持不变，已存储的 last touch 继续保留。这是 SDK 的合并法则：经过测试，而非口头承诺。
+之后的直接访问不会改变任何东西；first touch 保持不变，已存储的 last touch 继续保留。这是 SDK 的合并法则：经过测试，而非口头承诺。
 
 ## 读取归因数据
 
@@ -133,7 +134,7 @@ php bin/console clicktrail:diagnose
 
 ## Flex recipe 计划
 
-为 `symfony/recipes-contrib` 提交默认 `config/packages/clicktrail.yaml` 骨架的 pull request 计划在**发版之后**——包没有打标签版本前无法提交 recipe。在那之前，请按上文所示手动创建配置文件。
+为 `symfony/recipes-contrib` 提交默认 `config/packages/clicktrail.yaml` 骨架的 pull request 计划在**发版之后**；包没有打标签版本前无法提交 recipe。在那之前，请按上文所示手动创建配置文件。
 
 ## 刻意未包含的内容
 
@@ -142,7 +143,7 @@ php bin/console clicktrail:diagnose
 ## 差异对比
 
 - **自制的 UTM 转 Cookie 片段**把 URL 里带来的东西不加校验地存下来。ClickTrail 应用确定性的 first/last-touch 合并法则（经与 WordPress 和 GTM 引擎共享的金标准夹具验证）、以同意门控持久化，并以幂等键批量投递事件。
-- **DirectoryTree/Metrics** 统计匿名事件。互补关系——ClickTrail 将广告系列与身份和营收关联起来。
+- **DirectoryTree/Metrics** 统计匿名事件，承担的是不同用途。ClickTrail 传递观测到的获客上下文，不提供身份解析或营收归因。
 
 完整分析见 `../docs/COMPETITOR-NOTES.md`。
 
@@ -156,4 +157,4 @@ CI 在 PHP 8.1–8.3 上对所有 PHP 文件做 lint（`.github/workflows/ci.yml
 
 ## 许可协议
 
-MIT — 见 [LICENSE](LICENSE)。
+MIT; 见 [LICENSE](LICENSE)。
