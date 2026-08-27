@@ -4,7 +4,8 @@
 
 **clicktrail/symfony-bundle**
 
-Request-Capture, Consent-Gating, Messenger-Zustellung und Twig-Helper für deterministische Kampagnen-Attribution — in jeder Symfony-6.4-/7.x-Anwendung.
+Übertragen Sie beobachteten Akquisitionskontext durch Symfony-Request-, Twig-
+und Messenger-Grenzen mit explizitem Consent-Gating.
 
 </div>
 
@@ -31,7 +32,11 @@ Request-Capture, Consent-Gating, Messenger-Zustellung und Twig-Helper für deter
 
 ## Warum
 
-Die meisten Tracking-Pakete speichern, was eine Seite angezeigt hat. ClickTrail beweist, welche Kampagne den Lead oder Verkauf erzeugt hat. Dieses Bundle ist ein schlanker Adapter über [`clicktrail/php-sdk`](https://github.com/vizuh/clicktrail-php), das den deterministischen parse/classify/merge-Kern besitzt; das Bundle übernimmt die Symfony-Effekte: Request-Subscriber, Consent-Gate, Messenger-Zustellung, Twig-Helper und Diagnose.
+Dieses Bundle bestimmt nicht, welche Kampagne einen Lead oder Verkauf verursacht
+hat. Es adaptiert [`clicktrail/php-sdk`](https://github.com/vizuh/clicktrail-php),
+das den deterministischen Parse-, Classify- und Merge-Kern bereitstellt. Das
+Bundle übernimmt Symfony-Request-Subscriber, Consent-Gate,
+Messenger-Zustellung, Twig-Helper und Diagnose.
 
 ## Installation
 
@@ -69,17 +74,17 @@ public function form(ContextHolder $holder): Response
 {
     $context = $holder->get();       // AttributionContext dieses Requests (oder null)
     // $context?->attribution->first->source === 'google',
-    // gesetztes $context?->attribution->first->clickIds['gclid'] — in der Session
+    // gesetztes $context?->attribution->first->clickIds['gclid']; in der Session
     // gespeichert NUR wenn Consent Analytics-Storage erlaubt; unbekannt = verweigert.
 }
 
 // 3. Bei der Konversion die Zustellung dispatchen:
 $this->bus->dispatch(new \ClickTrail\Symfony\Messenger\DeliverEventsMessage());
-// Der Handler flushed den BatchClient des SDK — POST im Batch an den Endpoint mit
+// Der Handler flushed den BatchClient des SDK; POST im Batch an den Endpoint mit
 // Idempotency-Keys; nichts wird während des Requests selbst gesendet.
 ```
 
-Ein direkter Besuch danach ändert nichts — der First Touch bleibt, der gespeicherte Last Touch bleibt erhalten. Das ist das Merge-Gesetz des SDK: getestet, nicht versprochen.
+Ein direkter Besuch danach ändert nichts; der First Touch bleibt, der gespeicherte Last Touch bleibt erhalten. Das ist das Merge-Gesetz des SDK: getestet, nicht versprochen.
 
 ## Attribution lesen
 
@@ -134,7 +139,7 @@ Verifizieren Sie ClickTrail-Webhook-Callbacks mit SHA-256-Vergleich in konstante
 
 ## Flex-Rezept-Plan
 
-Ein Pull Request für `symfony/recipes-contrib` mit dem Standard-Skeleton von `config/packages/clicktrail.yaml` ist **nach dem Release** geplant — das Rezept kann erst eingereicht werden, wenn das Paket eine getaggte Version hat. Bis dahin erstellen Sie die Config-Datei manuell wie oben gezeigt.
+Ein Pull Request für `symfony/recipes-contrib` mit dem Standard-Skeleton von `config/packages/clicktrail.yaml` ist **nach dem Release** geplant; das Rezept kann erst eingereicht werden, wenn das Paket eine getaggte Version hat. Bis dahin erstellen Sie die Config-Datei manuell wie oben gezeigt.
 
 ## Nicht enthalten (bewusst)
 
@@ -143,7 +148,9 @@ Die **Doctrine-Integration** (Persistenz von Attribution-Snapshots auf Entities,
 ## Unterschiede
 
 - **DIY-UTM-zu-Cookie-Snippets** speichern alles, was die URL mitbrachte, unvalidiert. ClickTrail wendet deterministische First-/Last-Touch-Merge-Gesetze an, validiert durch Golden Fixtures, die unsere WordPress- und GTM-Engines teilen, prüft die Persistenz gegen Consent und stellt Events gebündelt mit Idempotency-Keys zu.
-- **DirectoryTree/Metrics** zählt anonyme Events. Komplementär — ClickTrail verbindet Kampagnen mit Identitäten und Umsatz.
+- **DirectoryTree/Metrics** zählt anonyme Events. Es erfüllt einen anderen
+  Zweck; ClickTrail überträgt beobachteten Akquisitionskontext und bietet weder
+  Identitätsauflösung noch Umsatzattribution.
 
 Siehe `../docs/COMPETITOR-NOTES.md` für die vollständige Analyse.
 
@@ -157,4 +164,4 @@ Die CI lintet alle PHP-Dateien unter PHP 8.1–8.3 (`.github/workflows/ci.yml`, 
 
 ## Lizenz
 
-MIT — siehe [LICENSE](LICENSE).
+MIT; siehe [LICENSE](LICENSE).
