@@ -11,19 +11,8 @@
         "symfony/clock": "^6.4|^7.0",
         "twig/twig": "^3.0",
         "psr/log": "^3.0",
-        "clicktrail/php-sdk": "dev-main"
+        "clicktrail/php-sdk": "^0.1.0"
     },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../clicktrail-php",
-            "options": {"symlink": true}
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/vizuh/clicktrail-php.git"
-        }
-    ],
     "autoload": {
         "psr-4": {"ClickTrail\\Symfony\\": "src/"}
     },

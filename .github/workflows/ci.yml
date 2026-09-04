@@ -27,29 +27,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/checkout@v7
-        with:
-          repository: vizuh/clicktrail-php
-          path: sdk
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: intl
           coverage: none
-      - name: Point Composer at the SDK checkout
-        run: |
-          set -euo pipefail
-          if grep -q '"../clicktrail-php"' composer.json; then
-            sed -i 's#"../clicktrail-php"#"sdk"#g' composer.json
-          elif grep -q '"clicktrail/php-sdk"' composer.json; then
-            composer config repositories.clicktrail-sdk path sdk
-          fi
       - name: Validate Composer metadata
         run: composer --no-plugins validate --no-check-publish --strict
       - name: Install dependencies (strict)
         run: composer install --no-plugins --prefer-dist --no-interaction --no-progress
       - name: Run standalone assertions
-        env:
-          CLICKTRAIL_APP_ROOT: ${{ github.workspace }}
-          CLICKTRAIL_SDK_ROOT: ${{ github.workspace }}/sdk
         run: php tests/_runner.php

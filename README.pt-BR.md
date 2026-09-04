@@ -39,7 +39,7 @@ A maioria dos pacotes de tracking guarda o que a página mostrou. O ClickTrail p
 composer require clicktrail/symfony-bundle
 ```
 
-Requer PHP **>= 8.1**. (O repositório do `clicktrail/php-sdk` precisa ser resolvível; um path repo e um fallback VCS estão declarados no `composer.json` deste pacote.)
+Requer PHP **>= 8.1**. O bundle resolve o `clicktrail/php-sdk` como uma dependência Composer pública e estável.
 
 ## Início rápido
 

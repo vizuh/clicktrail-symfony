@@ -39,7 +39,7 @@
 composer require clicktrail/symfony-bundle
 ```
 
-要求 PHP **>= 8.1**。（`clicktrail/php-sdk` 仓库必须可解析；本包的 `composer.json` 中声明了 path repo 与 VCS 回退。）
+要求 PHP **>= 8.1**。bundle 通过 Composer 将 `clicktrail/php-sdk` 作为公开稳定依赖解析。
 
 ## 快速上手
 

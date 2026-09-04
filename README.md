@@ -39,7 +39,7 @@ Most tracking packages store what a page showed. ClickTrail proves which campaig
 composer require clicktrail/symfony-bundle
 ```
 
-Requires PHP **>= 8.1**. (The `clicktrail/php-sdk` repository must be resolvable; a path repo and a VCS fallback are declared in this package's `composer.json`.)
+Requires PHP **>= 8.1**. The bundle resolves `clicktrail/php-sdk` as a stable public Composer dependency.
 
 ## Quick start
 
