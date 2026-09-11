@@ -4,7 +4,8 @@
 
 **clicktrail/symfony-bundle**
 
-Captura de request, gating por consentimento, entrega via Messenger e helpers Twig para atribuição determinística de campanhas — em qualquer app Symfony 6.4 / 7.x.
+Leve o contexto de aquisição observado pelos pontos de requisição, Twig e
+Messenger do Symfony, com gate de consentimento explícito.
 
 </div>
 
@@ -31,7 +32,11 @@ Captura de request, gating por consentimento, entrega via Messenger e helpers Tw
 
 ## Por quê
 
-A maioria dos pacotes de tracking guarda o que a página mostrou. O ClickTrail prova qual campanha criou o lead ou a venda. Este bundle é um adaptador fino sobre o [`clicktrail/php-sdk`](https://github.com/vizuh/clicktrail-php), que detém o núcleo determinístico de parse/classify/merge; o bundle cuida dos efeitos Symfony: subscriber de request, gate de consentimento, entrega via Messenger, helpers Twig e diagnóstico.
+Este bundle não determina qual campanha causou um lead ou uma venda. Ele adapta
+o [`clicktrail/php-sdk`](https://github.com/vizuh/clicktrail-php), que cuida do
+núcleo determinístico de parse, classify e merge. O bundle cuida do subscriber
+de requisição, gate de consentimento, entrega via Messenger, helpers Twig e
+diagnósticos do Symfony.
 
 ## Instalação
 
@@ -69,18 +74,18 @@ public function form(ContextHolder $holder): Response
 {
     $context = $holder->get();       // AttributionContext desta request (ou null)
     // $context?->attribution->first->source === 'google',
-    // $context?->attribution->first->clickIds['gclid'] preenchido — persistido na
+    // $context?->attribution->first->clickIds['gclid'] preenchido; persistido na
     // sessão SOMENTE quando o consentimento permite analytics storage;
     // desconhecido = negado.
 }
 
 // 3. Na conversão, despache a entrega:
 $this->bus->dispatch(new \ClickTrail\Symfony\Messenger\DeliverEventsMessage());
-// o handler faz flush do BatchClient do SDK — POST em lote para o endpoint com
+// o handler faz flush do BatchClient do SDK; POST em lote para o endpoint com
 // idempotency keys; nada é enviado durante a própria request.
 ```
 
-Uma visita direta depois não muda nada — o first touch permanece, o last touch armazenado persiste. Essa é a merge law do SDK: testada, não prometida.
+Uma visita direta depois não muda nada; o first touch permanece, o last touch armazenado persiste. Essa é a merge law do SDK: testada, não prometida.
 
 ## Lendo a atribuição
 
@@ -135,7 +140,7 @@ Verifique callbacks de webhook do ClickTrail com comparação SHA-256 em tempo c
 
 ## Plano de receita Flex
 
-Um pull request para o `symfony/recipes-contrib` com o esqueleto padrão de `config/packages/clicktrail.yaml` está planejado **pós-release** — a receita não pode ser submetida antes que o pacote tenha uma versão tagada. Até lá, crie o arquivo de config manualmente como mostrado acima.
+Um pull request para o `symfony/recipes-contrib` com o esqueleto padrão de `config/packages/clicktrail.yaml` está planejado **pós-release**; a receita não pode ser submetida antes que o pacote tenha uma versão tagada. Até lá, crie o arquivo de config manualmente como mostrado acima.
 
 ## Não incluído (de propósito)
 
@@ -144,7 +149,9 @@ A **integração com Doctrine** (persistir snapshots de atribuição em entidade
 ## Como se diferencia
 
 - **Snippets DIY de UTM-para-cookie** guardam qualquer coisa que a URL trouxesse, sem validação. O ClickTrail aplica leis determinísticas de merge first/last-touch validadas por golden fixtures compartilhadas com nossos engines WordPress e GTM, gate de persistência por consentimento e entrega em lote com idempotency keys.
-- **DirectoryTree/Metrics** conta eventos anônimos. Complementar — o ClickTrail conecta campanhas a identidades e receita.
+- **DirectoryTree/Metrics** conta eventos anônimos. Ele atende a outro trabalho;
+  o ClickTrail leva contexto de aquisição observado e não oferece resolução de
+  identidade nem atribuição de receita.
 
 Veja `../docs/COMPETITOR-NOTES.md` para a análise completa.
 
@@ -158,4 +165,4 @@ O CI faz lint de todos os arquivos PHP no PHP 8.1–8.3 (`.github/workflows/ci.y
 
 ## Licença
 
-MIT — veja [LICENSE](LICENSE).
+MIT; veja [LICENSE](LICENSE).
