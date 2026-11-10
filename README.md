@@ -52,7 +52,7 @@ clicktrail:
     endpoint: '%env(CLICKTRAIL_ENDPOINT)%'
     consent_required: true        # unknown consent = denied (default true)
     delivery:
-        transport: sync           # sync|async (async routes via Messenger)
+        transport: sync           # sync|async: informational; messenger routing decides
     resolver_class: null          # FQCN implementing ConsentResolverInterface
 ```
 
@@ -73,10 +73,12 @@ public function form(ContextHolder $holder): Response
     // session ONLY when consent permits analytics storage; unknown = denied.
 }
 
-// 3. On conversion, dispatch delivery:
-$this->bus->dispatch(new \ClickTrail\Symfony\Messenger\DeliverEventsMessage());
-// handler flushes the SDK BatchClient — batched POST to endpoint with
-// idempotency keys; nothing is sent during the request itself.
+// 3. On conversion, queue the event on the autowired SDK client
+//    (ClickTrail\Client\BatchClient $batchClient) and dispatch delivery:
+$batchClient->conversion('order-42', ['value' => 99.0]);
+$this->bus->dispatch(new \ClickTrail\Symfony\Messenger\DeliverEventsMessage($batchClient->pending()));
+// The message carries the queued envelopes; the handler sends exactly those
+// as a batched POST with idempotency keys and `Authorization: Bearer <api_key>`.
 ```
 
 A direct visit afterwards changes nothing — first touch stays, stored last touch persists. That is the SDK's merge law, tested, not promised.
@@ -109,7 +111,9 @@ framework:
             ClickTrail\Symfony\Messenger\DeliverEventsMessage: async
 ```
 
-The handler flushes the SDK `BatchClient`. The container must provide PSR-18 client/request/stream factories (e.g. `symfony/http-client`). Delivery never happens during the request unless configured.
+The message carries the envelopes, so a worker that starts with an empty `BatchClient` still sends them: the handler restores them into a fresh client and flushes with the configured `api_key`. Without a routing entry, Messenger handles the message in-process, during the request. The bundle never flushes on its own (there is no `kernel.terminate` flush); `delivery.transport` is informational and shown by `clicktrail:diagnose`. The container must provide PSR-18 client/request/stream factories (e.g. `symfony/http-client`).
+
+SDK behavior to know: `pending()` does not clear the app client's queue, and `track()` sends in-request once 20 events are queued.
 
 ## Consent
 
