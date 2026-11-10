@@ -16,7 +16,8 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
  *     endpoint: '...'
  *     consent_required: true
  *     delivery:
- *         transport: sync|async   (async requires a working messenger.transport)
+ *         transport: sync|async   (informational, shown by clicktrail:diagnose;
+ *                                  Messenger routing decides where delivery runs)
  *     resolver_class: null        (FQCN implementing ConsentResolverInterface)
  *
  * Defaults are env placeholders so values resolve through Symfony env
@@ -53,7 +54,7 @@ final class Configuration implements ConfigurationInterface
                     ->enumNode('transport')
                         ->values(['sync', 'async'])
                         ->defaultValue('sync')
-                        ->info('sync flushes on kernel.terminate; async dispatches DeliverEventsMessage to the messenger transport')
+                        ->info('Informational (reported by clicktrail:diagnose). The bundle never flushes on its own: dispatch DeliverEventsMessage; framework.messenger.routing decides whether it is handled in-process or on a worker')
                     ->end()
                 ->end()
             ->end()

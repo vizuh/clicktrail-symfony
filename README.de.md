@@ -52,7 +52,7 @@ clicktrail:
     endpoint: '%env(CLICKTRAIL_ENDPOINT)%'
     consent_required: true        # unbekanntes Consent = verweigert (Standard true)
     delivery:
-        transport: sync           # sync|async (async läuft über Messenger)
+        transport: sync           # sync|async: informativ; Messenger-Routing entscheidet
     resolver_class: null          # FQCN, der ConsentResolverInterface implementiert
 ```
 
@@ -73,10 +73,12 @@ public function form(ContextHolder $holder): Response
     // gespeichert NUR wenn Consent Analytics-Storage erlaubt; unbekannt = verweigert.
 }
 
-// 3. Bei der Konversion die Zustellung dispatchen:
-$this->bus->dispatch(new \ClickTrail\Symfony\Messenger\DeliverEventsMessage());
-// Der Handler flushed den BatchClient des SDK — POST im Batch an den Endpoint mit
-// Idempotency-Keys; nichts wird während des Requests selbst gesendet.
+// 3. Bei der Konversion das Event im per Autowiring injizierten SDK-Client
+//    (ClickTrail\Client\BatchClient $batchClient) einreihen und die Zustellung dispatchen:
+$batchClient->conversion('order-42', ['value' => 99.0]);
+$this->bus->dispatch(new \ClickTrail\Symfony\Messenger\DeliverEventsMessage($batchClient->pending()));
+// Die Message trägt die eingereihten Envelopes; der Handler sendet genau diese
+// als Batch-POST mit Idempotency-Keys und `Authorization: Bearer <api_key>`.
 ```
 
 Ein direkter Besuch danach ändert nichts — der First Touch bleibt, der gespeicherte Last Touch bleibt erhalten. Das ist das Merge-Gesetz des SDK: getestet, nicht versprochen.
@@ -109,7 +111,9 @@ framework:
             ClickTrail\Symfony\Messenger\DeliverEventsMessage: async
 ```
 
-Der Handler flushed den `BatchClient` des SDK. Der Container muss PSR-18-Client-/Request-/Stream-Factories bereitstellen (z. B. `symfony/http-client`). Eine Zustellung findet nie während des Requests statt, sofern nicht konfiguriert.
+Die Message trägt die Envelopes, sodass auch ein Worker mit leerem `BatchClient` sie sendet: Der Handler stellt sie in einem frischen Client wieder her und flushed mit dem konfigurierten `api_key`. Ohne Routing-Eintrag verarbeitet Messenger die Message im selben Prozess, also während des Requests. Das Bundle flushed nie von sich aus (es gibt keinen Flush bei `kernel.terminate`); `delivery.transport` ist rein informativ und wird von `clicktrail:diagnose` angezeigt. Der Container muss PSR-18-Client-/Request-/Stream-Factories bereitstellen (z. B. `symfony/http-client`).
+
+Wissenswertes SDK-Verhalten: `pending()` leert die Queue des App-Clients nicht, und `track()` sendet noch im Request, sobald 20 Events eingereiht sind.
 
 ## Consent
 

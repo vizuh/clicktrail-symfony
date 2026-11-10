@@ -40,18 +40,39 @@
              this service fails at runtime, not compile time.
              // TODO verify host-app wiring docs: recommend
              Psr18Client + HttpFactory registration snippet in README. -->
+        <!-- Named arguments: BatchClient's 6th parameter is ?string $apiKey,
+             so positional wiring would put the logger in the API key slot.
+             $logger is non-nullable; framework-bundle always defines `logger`. -->
         <service id="clicktrail.batch_client" class="ClickTrail\Client\BatchClient">
-            <argument>%clicktrail.site_id%</argument>
-            <argument>%clicktrail.endpoint%</argument>
-            <argument type="service" id="Psr\Http\Client\ClientInterface"/>
-            <argument type="service" id="Psr\Http\Message\RequestFactoryInterface"/>
-            <argument type="service" id="Psr\Http\Message\StreamFactoryInterface"/>
-            <argument type="service" id="logger" on-invalid="null"/>
+            <argument key="$siteId">%clicktrail.site_id%</argument>
+            <argument key="$endpoint">%clicktrail.endpoint%</argument>
+            <argument key="$http" type="service" id="Psr\Http\Client\ClientInterface"/>
+            <argument key="$requestFactory" type="service" id="Psr\Http\Message\RequestFactoryInterface"/>
+            <argument key="$streamFactory" type="service" id="Psr\Http\Message\StreamFactoryInterface"/>
+            <argument key="$apiKey">%clicktrail.api_key%</argument>
+            <argument key="$logger" type="service" id="logger"/>
+        </service>
+        <!-- App-facing client: autowire BatchClient, track(), then dispatch
+             new DeliverEventsMessage($client->pending()). -->
+        <service id="ClickTrail\Client\BatchClient" alias="clicktrail.batch_client" public="true"/>
+
+        <!-- Pristine delivery client, used only by the handler, which clones
+             it per message. Kept separate from clicktrail.batch_client so
+             in-process (sync) handling does not re-send the app client's
+             queue, and a failed message leaves nothing queued for the next. -->
+        <service id="clicktrail.delivery_client" class="ClickTrail\Client\BatchClient" public="false">
+            <argument key="$siteId">%clicktrail.site_id%</argument>
+            <argument key="$endpoint">%clicktrail.endpoint%</argument>
+            <argument key="$http" type="service" id="Psr\Http\Client\ClientInterface"/>
+            <argument key="$requestFactory" type="service" id="Psr\Http\Message\RequestFactoryInterface"/>
+            <argument key="$streamFactory" type="service" id="Psr\Http\Message\StreamFactoryInterface"/>
+            <argument key="$apiKey">%clicktrail.api_key%</argument>
+            <argument key="$logger" type="service" id="logger"/>
         </service>
 
         <!-- Messenger delivery handler -->
         <service id="ClickTrail\Symfony\Messenger\DeliverEventsMessageHandler" class="ClickTrail\Symfony\Messenger\DeliverEventsMessageHandler">
-            <argument type="service" id="clicktrail.batch_client"/>
+            <argument type="service" id="clicktrail.delivery_client"/>
             <argument type="service" id="logger" on-invalid="null"/>
             <tag name="message_handler" handles="ClickTrail\Symfony\Messenger\DeliverEventsMessage"/> <!-- // TODO verify explicit handles attr vs __invoke auto-registration across Symfony 6.4/7.x before release -->
         </service>

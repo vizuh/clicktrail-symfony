@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace ClickTrail\Symfony\Messenger;
 
 /**
- * Delivery trigger message. Queued when delivery.transport=async so the
- * BatchClient flush happens on a worker, never during the request.
+ * Delivery message carrying the envelopes to send. Build it from the app's
+ * BatchClient at dispatch time so the payloads cross the transport boundary
+ * (a worker process starts with an empty BatchClient):
  *
- * Async routing (host app messenger.yaml):
+ *     $bus->dispatch(new DeliverEventsMessage($batchClient->pending()));
+ *
+ * Unrouted messages are handled in-process. Route it to an async transport
+ * (host app messenger.yaml) to send from a worker instead:
  *
  *     framework:
  *         messenger:
@@ -21,9 +25,9 @@ namespace ClickTrail\Symfony\Messenger;
  */
 final class DeliverEventsMessage
 {
-    /** @param array<int, array<string, mixed>>|null $events optional pre-queued events; null flushes whatever BatchClient holds */
+    /** @param array<int, array<string, mixed>> $events envelopes captured via BatchClient::pending() */
     public function __construct(
-        public readonly ?array $events = null,
+        public readonly array $events,
     ) {
     }
 }

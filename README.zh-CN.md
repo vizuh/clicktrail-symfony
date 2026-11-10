@@ -52,7 +52,7 @@ clicktrail:
     endpoint: '%env(CLICKTRAIL_ENDPOINT)%'
     consent_required: true        # 同意状态未知 = 拒绝（默认 true）
     delivery:
-        transport: sync           # sync|async（async 经 Messenger 路由）
+        transport: sync           # sync|async：仅供参考；由 Messenger 路由决定
     resolver_class: null          # 实现 ConsentResolverInterface 的 FQCN
 ```
 
@@ -73,10 +73,12 @@ public function form(ContextHolder $holder): Response
     // analytics storage 时才持久化到会话；未知 = 拒绝。
 }
 
-// 3. 转化发生时，派发投递：
-$this->bus->dispatch(new \ClickTrail\Symfony\Messenger\DeliverEventsMessage());
-// handler 刷新 SDK 的 BatchClient——批量 POST 到端点并带幂等键；
-// 请求本身期间不发送任何数据。
+// 3. 转化发生时，把事件加入自动装配的 SDK 客户端队列
+//    （ClickTrail\Client\BatchClient $batchClient），然后派发投递：
+$batchClient->conversion('order-42', ['value' => 99.0]);
+$this->bus->dispatch(new \ClickTrail\Symfony\Messenger\DeliverEventsMessage($batchClient->pending()));
+// 消息携带已入队的 envelope；handler 只发送这些 envelope，
+// 以批量 POST 发出，带幂等键和 `Authorization: Bearer <api_key>`。
 ```
 
 之后的直接访问不会改变任何东西——first touch 保持不变，已存储的 last touch 继续保留。这是 SDK 的合并法则：经过测试，而非口头承诺。
@@ -108,7 +110,9 @@ framework:
             ClickTrail\Symfony\Messenger\DeliverEventsMessage: async
 ```
 
-handler 会刷新 SDK 的 `BatchClient`。容器必须提供 PSR-18 的 client/request/stream 工厂（例如 `symfony/http-client`）。除非显式配置，投递从不在请求期间发生。
+消息携带 envelope，因此即使 worker 启动时 `BatchClient` 为空也能发送：handler 把它们恢复到一个全新的客户端，并使用配置的 `api_key` 执行 flush。没有路由配置时，Messenger 在当前进程内（即请求期间）处理该消息。bundle 从不自行 flush（不存在 `kernel.terminate` flush）；`delivery.transport` 仅作信息展示，由 `clicktrail:diagnose` 输出。容器必须提供 PSR-18 的 client/request/stream 工厂（例如 `symfony/http-client`）。
+
+需要了解的 SDK 行为：`pending()` 不会清空应用客户端的队列；队列中达到 20 个事件时，`track()` 会在请求期间直接发送。
 
 ## 同意管理
 
